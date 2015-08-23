@@ -6,3 +6,6 @@ authors = ["Ciaran Doherty <cad106uk@gmail.com>"]
 [lib]
 name = "web_scraper"
 crate-type = ["dylib"]
+
+[dependencies]
+hyper = "0.6.10"

@@ -1,17 +1,28 @@
-use std::thread;
+extern crate hyper;
+extern crate libc;
 
-fn worker() -> i64 {
-    let mut x: i64 = 0;
-    while x < 15_000_000 {
-        x += 1
-    }
-    x
+use std::thread;
+use std::io::Read;
+use std::c_str::CString;
+use libc::c_char;
+
+use hyper::Client;
+use hyper::header::Connection;
+
+fn worker(url: &str) -> String {
+    let client = Client::new();
+    let mut res = client.get(url)
+        .header(Connection::close())
+        .send().unwrap();
+
+    let mut body = String::new();
+    res.read_to_string(&mut body).unwrap();
+    body
 }
 
-#[no_mangle]
-pub extern fn process() {
-    let handles: Vec<_> = (0..10).map(
-        |_| {thread::spawn(|| worker())
+fn start_read_thread(url: &str) {
+    let handles: Vec<_> = (0..2).map(
+        |_| {thread::spawn(|| worker(url))
     }).collect();
 
     for h in handles {
@@ -21,8 +32,18 @@ pub extern fn process() {
     println!("Done");
 }
 
+#[no_mangle]
+pub extern "C" fn process(url: *const c_char) {
+    let c_value = unsafe { CString::new(value, false) };
+
+    match c_value.as_str() {
+        Some(value) => start_read_thread(value),
+        _ => None
+    }
+}
+
 
 #[test]
 fn it_works() {
-    assert_eq!(worker(), 15_000_000);
+    assert_eq!(worker("http://www.icanhazip.com"), "85.133.27.34\n");
 }
