@@ -1,0 +1,4 @@
+[package]
+name = "web_scraper"
+version = "0.1.0"
+authors = ["Ciaran Doherty <cad106uk@gmail.com>"]
