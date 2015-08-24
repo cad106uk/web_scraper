@@ -3,7 +3,7 @@ extern crate libc;
 
 use std::thread;
 use std::io::Read;
-use std::c_str::CString;
+use std::ffi::CStr;
 use libc::c_char;
 
 use hyper::Client;
@@ -34,7 +34,9 @@ fn start_read_thread(url: &str) {
 
 #[no_mangle]
 pub extern "C" fn process(url: *const c_char) {
-    let c_value = unsafe { CString::new(value, false) };
+    let c_value = unsafe {
+        CStr::from_ptr(url).to_string_lossy().into_owned()
+    };
 
     match c_value.as_str() {
         Some(value) => start_read_thread(value),
