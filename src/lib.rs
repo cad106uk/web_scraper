@@ -34,13 +34,13 @@ fn start_read_thread(url: &str) {
 
 #[no_mangle]
 pub extern "C" fn process(url: *const c_char) {
-    let c_value = unsafe {
+    let c_value = Some(unsafe {
         CStr::from_ptr(url).to_string_lossy().into_owned()
-    };
+    });
 
-    match c_value.as_str() {
-        Some(value) => start_read_thread(value),
-        _ => None
+    match c_value {
+        Some(value) => start_read_thread(String::from_str(value.as_str())),
+        None => {}
     }
 }
 
