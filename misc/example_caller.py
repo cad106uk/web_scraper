@@ -13,9 +13,9 @@ def worker(val):
 def main():
     lib = CDLL(
         "/home/ciaran/Documents/rust/web_scraper/"
-        "target/release/libweb_scraper.so"
+        "target/debug/libweb_scraper.so"
     )
-    lib.process()
+    print lib.process("icanhazip.com")
     # threads = []
     # for i in range(10):
     #     t = threading.Thread(target=worker, args=(i,))

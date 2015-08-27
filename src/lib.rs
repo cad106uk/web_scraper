@@ -32,8 +32,12 @@ fn start_read_thread(url: String) {
         })}).collect();
 
     for h in handles {
-        let res = h.join().map_err(|_| "Could not join a thread!");
-        println!("Thread finished with count={}", res.unwrap());
+        let res = h.join(); //.map_err(|val| val);
+        match res {
+            Ok(v) => println!("Thread finished with count={}", v),
+            Err(e) => println!("Thread errored with count={}", e),
+        }
+
     }
     println!("Done");
 }
