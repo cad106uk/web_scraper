@@ -35,7 +35,7 @@ fn start_read_thread(url: String) {
         let res = h.join(); //.map_err(|val| val);
         match res {
             Ok(v) => println!("Thread finished with count={}", v),
-            Err(e) => println!("Thread errored with count={}", e),
+            Err(e) => println!("Thread errored with count={:?}", e),
         }
 
     }
