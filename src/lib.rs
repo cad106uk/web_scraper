@@ -2,6 +2,7 @@ extern crate hyper;
 extern crate libc;
 
 use std::thread;
+use std::string::String;
 use std::io::Read;
 use std::ffi::CStr;
 use libc::c_char;
@@ -9,9 +10,9 @@ use libc::c_char;
 use hyper::Client;
 use hyper::header::Connection;
 
-fn worker(url: &str) -> String {
+fn worker(url: String) -> String {
     let client = Client::new();
-    let mut res = client.get(url)
+    let mut res = client.get(url.as_str())
         .header(Connection::close())
         .send().unwrap();
 
@@ -20,10 +21,12 @@ fn worker(url: &str) -> String {
     body
 }
 
-fn start_read_thread(url: &str) {
-    let handles: Vec<_> = (0..2).map(
-        |_| {thread::spawn(|| worker(url))
-    }).collect();
+fn start_read_thread(url: String) {
+    let handles: Vec<_> = (0..2).map(|_| {
+        let thread_url = url.clone();
+        thread::spawn(|| {
+            worker(thread_url)
+        })}).collect();
 
     for h in handles {
         let res = h.join().map_err(|_| "Could not join a thread!");
