@@ -1,5 +1,8 @@
-extern crate hyper;
+#![feature(libc)]
+#![feature(convert)]
+#![feature(cstr_to_str)]
 extern crate libc;
+extern crate hyper;
 
 use std::thread;
 use std::string::String;
@@ -42,7 +45,7 @@ pub extern "C" fn process(url: *const c_char) {
     });
 
     match c_value {
-        Some(value) => start_read_thread(String::from_str(value.as_str())),
+        Some(value) => start_read_thread(String::from(value.as_str())),
         None => {}
     }
 }
