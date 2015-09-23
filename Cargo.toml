@@ -8,4 +8,7 @@ name = "web_scraper"
 crate-type = ["dylib"]
 
 [dependencies]
-hyper = "0.6.10"
+hyper = "0.6"
+libc = "0.1"
+html5ever = "*"
+tendril = "*"
