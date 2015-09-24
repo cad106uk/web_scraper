@@ -5,7 +5,8 @@ extern crate hyper;
 extern crate html5ever;
 extern crate tendril;
 
-use std::thread;
+use std::result::Result;
+// use std::thread;
 use std::string::String;
 use std::io::Read;
 use std::iter::repeat;
@@ -32,7 +33,7 @@ fn worker(url: String) -> String {
     body
 }
 
-fn walk(indent: usize, handle: Handle) {
+fn walk(indent: usize, handle: Handle) -> Result<usize, usize> {
     let node = handle.borrow();
     // FIXME: don't allocate
     print!("{}", repeat(" ").take(indent).collect::<String>());
@@ -41,16 +42,16 @@ fn walk(indent: usize, handle: Handle) {
             => println!("#Document"),
 
         Doctype(ref name, ref public, ref system)
-            => println!("<!DOCTYPE {} \"{}\" \"{}\">", *name, *public, *system),
+            => println!("#Doctype <!DOCTYPE {} \"{}\" \"{}\">", *name, *public, *system),
 
-        Text(ref text)
-            => println!("#text: {}", text),
+        Text(_)
+            => println!("#text: Your Moma"),
 
         Comment(ref text)
-            => println!("<!-- {} -->", text),
+            => println!("#Comment <!-- {} -->", text),
 
         Element(ref name, _, ref attrs) => {
-            print!("<{}", name.local);
+            print!("#Element <{}", name.local);
             for attr in attrs.iter() {
                 print!(" {}=\"{}\"", attr.name.local, attr.value);
             }
@@ -58,25 +59,53 @@ fn walk(indent: usize, handle: Handle) {
         }
     }
 
+    let mut tmp = indent;
     for child in node.children.iter() {
-        walk(indent+4, child.clone());
+        let res = walk(indent+4, child.clone());
+        tmp = match res {
+            Ok(v) => v,
+            Err(e) => {
+                println!("walk errored with ={:?}", e);
+                e
+            }
+        }
     }
+    Ok(tmp)
 }
 
-fn start_read_thread(url: String) {
-    let handles: Vec<_> = (0..2).map(|_| {
-        let thread_url = url.clone();
-        thread::spawn(|| {
-            worker(thread_url)
-        })}).collect();
+// fn start_read_thread(url: String) {
+//     let thread_url = url.clone().to_string();
+//     let handles: Vec<_> = (0..2).map(move |_| {
+//         thread::spawn(|| {
+//             let raw_html_page = worker(thread_url);
+//             let mut input = StrTendril::new();
+//             let _ = input.try_push_bytes(raw_html_page.as_bytes());
 
-    for h in handles {
-        let res = h.join(); //.map_err(|val| val);
-        match res {
-            Ok(v) => println!("Thread finished with count={}", v),
-            Err(e) => println!("Thread errored with count={:?}", e),
-        }
+//             let dom: RcDom = parse(one_input(input), Default::default());
+//             walk(0, dom.document);
+//         })}).collect();
 
+//     for h in handles {
+//         let res = h.join();
+//         match res {
+//             Ok(v) => println!("Thread finished with count={:?}", v),
+//             Err(e) => println!("Thread errored with count={:?}", e),
+//         }
+
+//     }
+//     println!("Done");
+// }
+
+fn run_in_this_thread(url: String) {
+    let raw_html_page = worker(url.to_string());
+    let mut input = StrTendril::new();
+    let _ = input.try_push_bytes(raw_html_page.as_bytes());
+
+    let dom: RcDom = parse(one_input(input), Default::default());
+    let res = walk(0, dom.document);
+    match res {
+        Ok(v) => println!("Thread finished with count={:?}", v),
+        Err(e) => println!("Thread errored with count={:?}", e),
     }
     println!("Done");
 }
@@ -88,7 +117,7 @@ pub extern "C" fn process(url: *const c_char) {
     });
 
     match c_value {
-        Some(value) => start_read_thread(String::from(value.as_str())),
+        Some(value) => run_in_this_thread(String::from(value.as_str())),
         None => {}
     }
 }
@@ -101,6 +130,11 @@ fn it_works() {
     let _ = input.try_push_bytes(raw_html_page.as_bytes());
 
     let dom: RcDom = parse(one_input(input), Default::default());
-    walk(0, dom.document);
+    let res = walk(0, dom.document);
     assert_eq!(true, true);
+    assert!(res.is_ok());
+    assert_eq!(match res {
+        Ok(val) => val,
+        Err(e) => e
+    }, 20);
 }
