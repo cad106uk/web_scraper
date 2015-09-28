@@ -15,7 +15,7 @@ def main():
         "/home/ciaran/Documents/rust/web_scraper/"
         "target/debug/libweb_scraper.so"
     )
-    print lib.process("http://google.com")
+    print lib.process("http://slashdot.org")
     # threads = []
     # for i in range(10):
     #     t = threading.Thread(target=worker, args=(i,))
