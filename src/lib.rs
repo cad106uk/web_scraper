@@ -6,7 +6,7 @@ extern crate html5ever;
 extern crate tendril;
 
 use std::result::Result;
-// use std::thread;
+use std::thread;
 use std::string::String;
 use std::io::Read;
 use std::iter::repeat;
@@ -96,6 +96,24 @@ fn walk(indent: usize, handle: Handle) -> Result<usize, usize> {
 //     println!("Done");
 // }
 
+fn start_read_thread(url: String) {
+    let thread_url = url.clone().to_string();
+    let thr = thread::spawn(|| {
+        let raw_html_page = worker(thread_url);
+        let mut input = StrTendril::new();
+        let _ = input.try_push_bytes(raw_html_page.as_bytes());
+
+        let dom: RcDom = parse(one_input(input), Default::default());
+        walk(0, dom.document);
+    });
+
+    let res = thr.join();
+    match res {
+        Ok(v) => println!("Thread finished with count={:?}", v),
+        Err(e) => println!("Thread errored with count={:?}", e),
+    }
+}
+
 fn run_in_this_thread(url: String) {
     let raw_html_page = worker(url.to_string());
     let mut input = StrTendril::new();
@@ -117,7 +135,7 @@ pub extern "C" fn process(url: *const c_char) {
     });
 
     match c_value {
-        Some(value) => run_in_this_thread(String::from(value.as_str())),
+        Some(value) => start_read_thread(String::from(value.as_str())),
         None => {}
     }
 }
