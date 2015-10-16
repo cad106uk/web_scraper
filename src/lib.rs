@@ -12,6 +12,7 @@ use std::string::String;
 use std::io::Read;
 use std::ffi::CStr;
 use std::default::Default;
+use std::sync::mpsc::{channel, Sender, Receiver};
 use libc::c_char;
 
 use hyper::Client;
@@ -24,12 +25,9 @@ use tendril::StrTendril;
 
 use string_cache::atom::Atom;
 
-
 fn worker(url: String) -> String {
     let client = Client::new();
-    let mut res = client.get(url.as_str())
-        .header(Connection::close())
-        .send().unwrap();
+    let mut res = client.get(url.as_str()).header(Connection::close()).send().unwrap();
 
     let mut body = String::new();
     res.read_to_string(&mut body).unwrap();
@@ -68,21 +66,35 @@ fn walk(indent: usize, handle: Handle, count: &mut Box<u64>) -> Result<u64, u64>
     Ok(**count)
 }
 
-fn start_read_thread(url: String) {
-    let thread_url = url.clone().to_string();
-    let thr = thread::spawn(|| {
-        let raw_html_page = worker(thread_url);
-        let mut input = StrTendril::new();
-        let _ = input.try_push_bytes(raw_html_page.as_bytes());
+fn store_raw_html_page(pages: Sender<String>, thread_url: String) {
+    pages.send(worker(thread_url)).unwrap()
+}
 
-        let dom: RcDom = parse(one_input(input), Default::default());
-        let mut output = Box::new(0u64);
-        let res = walk(0, dom.document, &mut output);
-        println!("output count {}", output);
-        res
+fn process_next_page(raw_pages: Receiver<String>) -> Result<u64, u64> {
+    let raw_html_page = raw_pages.recv().unwrap();
+
+    let mut output = Box::new(0u64);
+    let mut input = StrTendril::new();
+    let _ = input.try_push_bytes(raw_html_page.as_bytes());
+    let page: RcDom = parse(one_input(input), Default::default());
+
+    let res = walk(0, page.document, &mut output);
+    println!("Output {:?}", output);
+    res
+}
+
+fn start_read_thread(url: String) {
+    let (sender, receiver) = channel::<String>();
+    let thread_url = url.clone().to_string();
+
+    let process_page = thread::spawn(|| {
+        process_next_page(receiver)
+    });
+    thread::spawn(|| {
+        store_raw_html_page(sender, thread_url)
     });
 
-    let res = thr.join();
+    let res = process_page.join();
     match res {
         Ok(v) => println!("Thread finished with count={:?}", v),
         Err(e) => println!("Thread errored with count={:?}", e),
@@ -94,6 +106,7 @@ pub extern "C" fn process(url: *const c_char) {
     let c_value = Some(unsafe {
         CStr::from_ptr(url).to_string_lossy().into_owned()
     });
+
 
     match c_value {
         Some(value) => start_read_thread(String::from(value.as_str())),
@@ -111,7 +124,7 @@ fn it_works() {
     let dom: RcDom = parse(one_input(input), Default::default());
     let mut output = Box::new(0u64);
     let res = walk(0, dom.document, &mut output);
-    assert_eq!(true, true);
+    assert_eq!(*output, 25);
     assert!(res.is_ok());
     assert_eq!(match res {
         Ok(val) => val,
