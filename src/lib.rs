@@ -1,22 +1,18 @@
 #![feature(convert)]
 #![feature(cstr_to_str)]
 extern crate libc;
-extern crate hyper;
 extern crate html5ever;
 extern crate tendril;
 extern crate string_cache;
+extern crate hyper;
 
 use std::result::Result;
 use std::thread;
 use std::string::String;
-use std::io::Read;
 use std::ffi::CStr;
 use std::default::Default;
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{channel, Receiver};
 use libc::c_char;
-
-use hyper::Client;
-use hyper::header::Connection;
 
 use html5ever::{parse, one_input};
 use html5ever::rcdom::{Document, Doctype, Comment, Element, RcDom, Handle, Text};
@@ -24,15 +20,9 @@ use html5ever::rcdom::{Document, Doctype, Comment, Element, RcDom, Handle, Text}
 use tendril::StrTendril;
 
 use string_cache::atom::Atom;
+use web_page_downloader::{store_raw_html_page, download_page};
 
-fn worker(url: String) -> String {
-    let client = Client::new();
-    let mut res = client.get(url.as_str()).header(Connection::close()).send().unwrap();
-
-    let mut body = String::new();
-    res.read_to_string(&mut body).unwrap();
-    body
-}
+mod web_page_downloader;
 
 fn walk(indent: usize, handle: Handle, count: &mut Box<u64>) -> Result<u64, u64> {
     let node = handle.borrow();
@@ -64,10 +54,6 @@ fn walk(indent: usize, handle: Handle, count: &mut Box<u64>) -> Result<u64, u64>
         }
     }
     Ok(**count)
-}
-
-fn store_raw_html_page(pages: Sender<String>, thread_url: String) {
-    pages.send(worker(thread_url)).unwrap()
 }
 
 fn process_next_page(raw_pages: Receiver<String>) -> Result<u64, u64> {
@@ -117,7 +103,7 @@ pub extern "C" fn process(url: *const c_char) {
 
 #[test]
 fn it_works() {
-    let raw_html_page = worker("http://slashdot.org".to_string());
+    let raw_html_page = download_page("http://slashdot.org".to_string());
     let mut input = StrTendril::new();
     let _ = input.try_push_bytes(raw_html_page.as_bytes());
 
