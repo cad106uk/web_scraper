@@ -1,5 +1,4 @@
 #![feature(convert)]
-#![feature(cstr_to_str)]
 extern crate libc;
 extern crate html5ever;
 extern crate tendril;
@@ -19,8 +18,8 @@ use html5ever::rcdom::{Document, Doctype, Comment, Element, RcDom, Handle, Text}
 
 use tendril::StrTendril;
 
-use string_cache::atom::Atom;
-use web_page_downloader::{store_raw_html_page, download_page};
+use string_cache::Atom;
+use web_page_downloader::store_raw_html_page;
 
 mod web_page_downloader;
 
@@ -29,7 +28,7 @@ fn walk(indent: usize, handle: Handle, count: &mut Box<u64>) -> Result<u64, u64>
 
     match node.node {
         Element(ref name, _, _) => {
-            if name.local == Atom::from_slice("article") {
+            if name.local == Atom::from("article") {
                 **count += 1
             }
         },
