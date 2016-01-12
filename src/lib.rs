@@ -19,7 +19,7 @@ use html5ever::rcdom::{Document, Doctype, Comment, Element, RcDom, Handle, Text}
 use tendril::StrTendril;
 
 use string_cache::Atom;
-use web_page_downloader::store_raw_html_page;
+use web_page_downloader::{store_raw_html_page, download_page};
 
 mod web_page_downloader;
 
