@@ -1,4 +1,3 @@
-#![feature(convert)]
 extern crate libc;
 extern crate html5ever;
 extern crate tendril;
@@ -94,7 +93,7 @@ pub extern "C" fn process(url: *const c_char) {
 
 
     match c_value {
-        Some(value) => start_read_thread(String::from(value.as_str())),
+        Some(value) => start_read_thread(String::from(&value[..])),
         None => ()
     }
 }

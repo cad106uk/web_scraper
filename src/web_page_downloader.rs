@@ -12,7 +12,7 @@ use hyper::header::Connection;
 
 pub fn download_page(url: String) -> String {
     let client = Client::new();
-    let mut res = client.get(url.as_str()).header(Connection::close()).send().unwrap();
+    let mut res = client.get(&url[..]).header(Connection::close()).send().unwrap();
 
     let mut body = String::new();
     res.read_to_string(&mut body).unwrap();
