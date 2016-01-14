@@ -108,12 +108,12 @@ fn it_works() {
     let dom: RcDom = parse(one_input(input), Default::default());
     let mut output = Box::new(0u64);
     let res = walk(0, dom.document, &mut output);
-    assert_eq!(*output, 25);
+    assert_eq!(*output, 26);
     assert!(res.is_ok());
     assert_eq!(match res {
         Ok(val) => val,
         Err(e) => e
-    }, 25);
+    }, 26);
 }
 
 // fn start_read_thread(url: String) {
