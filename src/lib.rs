@@ -22,7 +22,7 @@ use web_page_downloader::{store_raw_html_page, download_page};
 
 mod web_page_downloader;
 
-fn walk(indent: usize, handle: Handle, count: &mut Box<u64>) -> Result<u64, u64> {
+fn walk(handle: Handle, count: &mut Box<u64>) -> Result<u64, u64> {
     let node = handle.borrow();
 
     match node.node {
@@ -43,7 +43,7 @@ fn walk(indent: usize, handle: Handle, count: &mut Box<u64>) -> Result<u64, u64>
 
 
     for child in node.children.iter() {
-        let res = walk(indent+4, child.clone(), count);
+        let res = walk(child.clone(), count);
 
         match res {
             Ok(v) => println!("walk success with ={:?}", v),
@@ -62,7 +62,7 @@ fn process_next_page(raw_pages: Receiver<String>) -> Result<u64, u64> {
     let _ = input.try_push_bytes(raw_html_page.as_bytes());
     let page: RcDom = parse(one_input(input), Default::default());
 
-    let res = walk(0, page.document, &mut output);
+    let res = walk(page.document, &mut output);
     println!("Output {:?}", output);
     res
 }
@@ -91,7 +91,6 @@ pub extern "C" fn process(url: *const c_char) {
         CStr::from_ptr(url).to_string_lossy().into_owned()
     });
 
-
     match c_value {
         Some(value) => start_read_thread(String::from(&value[..])),
         None => ()
@@ -107,7 +106,7 @@ fn it_works() {
 
     let dom: RcDom = parse(one_input(input), Default::default());
     let mut output = Box::new(0u64);
-    let res = walk(0, dom.document, &mut output);
+    let res = walk(dom.document, &mut output);
     assert_eq!(*output, 26);
     assert!(res.is_ok());
     assert_eq!(match res {
