@@ -44,6 +44,10 @@ fn get_internal_links(page: RcDom) {
     },
 }
 
+fn store_raw_html_page(pages: Sender<String>, thread_url: String) {
+    pages.send(download_page(thread_url)).unwrap()
+}
+
 fn download_page(url: String) -> RcDom {
     let client = Client::new();
     let res = client.get(&url[..]).header(Connection::close()).send().unwrap();
