@@ -3,6 +3,7 @@ extern crate html5ever;
 extern crate tendril;
 extern crate string_cache;
 extern crate hyper;
+extern crate url;
 
 use std::result::Result;
 use std::thread;
@@ -19,6 +20,9 @@ use tendril::StrTendril;
 
 use string_cache::Atom;
 
+use website_crawler::{download_page, store_raw_html_page};
+
+mod website_crawler;
 
 fn walk(handle: Handle, count: &mut Box<u64>) -> Result<u64, u64> {
     let node = handle.borrow();

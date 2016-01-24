@@ -1,54 +1,59 @@
-// Given an URL, get the page for that URL
-// Given a page of a website, get all the anchors that point to pages within that website
-// Make sure that each intrnal anchor is only recorded once.
-// visit ever url in the website record all the and pages and urls
 
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::Sender;
+use std::io::Read;
+use std::default::Default;
+
+use tendril::StrTendril;
+
+use string_cache::Atom;
 
 use hyper::Client;
 use hyper::header::Connection;
 
 use html5ever::{parse, one_input};
-use html5ever::rcdom::Element;
+use html5ever::rcdom::{Element, RcDom};
 
 use url::Url;
 
-let mut KnownWebsitePages = HashMap::new();
+static mut KnownWebsitePages: HashMap<String, HashSet<String>> = HashMap::new();
 
 fn crawl_page(page_url: String) {
-    let parsed_url = Url::parse(page_url).unwrap();
+    let parsed_url = String::from(Url::parse(&page_url).unwrap().domain().unwrap());
 
-    let mut pages = KnownWebsitePagess.entry(
-        parsed_url.domain().unwrap()
-    ).or_insert(mut HashSet::new());
+    unsafe {
+        let mut pages = KnownWebsitePages.entry(
+            parsed_url
+        ).or_insert(HashSet::new());
 
-    if pages.insert(parsed_url) {
+        if pages.insert(parsed_url) {
+        }
     }
 }
 
-fn handle_node_anchor(node: Element) {
-    //Your moma
-}
+// fn handle_node_anchor(node: Element) {
+//     //Your moma
+// }
 
 fn get_internal_links(page: RcDom) {
-    let node = handle.borrow();
+    let node = page.document.borrow();
 
     match node.node {
-        Element(ref nmae, _ _) => {
+        Element(ref name, _, _) => {
             if name.local == Atom::from("a") {
             }
         },
 
         _ => ()
-    },
+    }
 }
 
 fn store_raw_html_page(pages: Sender<String>, thread_url: String) {
     pages.send(download_page(thread_url)).unwrap()
 }
 
-fn download_page(url: String) -> RcDom {
+fn download_page(url: String) -> String {
     let client = Client::new();
     let res = client.get(&url[..]).header(Connection::close()).send().unwrap();
 
@@ -57,7 +62,8 @@ fn download_page(url: String) -> RcDom {
     res.read_to_string(&mut body).unwrap();
     input.try_push_bytes(body.as_bytes());
 
-    let parsed_dom: RcDom = parse(one_input(input));
+    let parsed_dom: RcDom = parse(one_input(input), Default::default());
     get_internal_links(parsed_dom);
-    parsed_dom
+    body
+    // parsed_dom
 }
