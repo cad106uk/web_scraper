@@ -10,6 +10,7 @@ crate-type = ["dylib"]
 [dependencies]
 hyper = "0.6"
 libc = "0.1"
-html5ever = "*"
-tendril = "*"
-string_cache = "*"
+html5ever = "0.2"
+tendril = "0.1"
+string_cache = "0.2"
+url = "0.5"
