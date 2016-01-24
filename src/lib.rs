@@ -32,7 +32,7 @@ fn walk(handle: Handle, count: &mut Box<u64>) -> Result<u64, u64> {
             if name.local == Atom::from("article") {
                 **count += 1
             }
-        },
+        }
 
         Document => (),
 
@@ -40,7 +40,7 @@ fn walk(handle: Handle, count: &mut Box<u64>) -> Result<u64, u64> {
 
         Text(_) => (),
 
-        Comment(_) => ()
+        Comment(_) => (),
     };
 
 
@@ -50,7 +50,7 @@ fn walk(handle: Handle, count: &mut Box<u64>) -> Result<u64, u64> {
         match res {
             Ok(v) => println!("walk success with ={:?}", v),
 
-            Err(e) => println!("walk errored with ={:?}", e)
+            Err(e) => println!("walk errored with ={:?}", e),
         }
     }
     Ok(**count)
@@ -73,12 +73,8 @@ fn start_read_thread(url: String) {
     let (sender, receiver) = channel::<String>();
     let thread_url = url.clone().to_string();
 
-    let process_page = thread::spawn(|| {
-        process_next_page(receiver)
-    });
-    thread::spawn(|| {
-        store_raw_html_page(sender, thread_url)
-    });
+    let process_page = thread::spawn(|| process_next_page(receiver));
+    thread::spawn(|| store_raw_html_page(sender, thread_url));
 
     let res = process_page.join();
     match res {
@@ -89,13 +85,11 @@ fn start_read_thread(url: String) {
 
 #[no_mangle]
 pub extern "C" fn process(url: *const c_char) {
-    let c_value = Some(unsafe {
-        CStr::from_ptr(url).to_string_lossy().into_owned()
-    });
+    let c_value = Some(unsafe { CStr::from_ptr(url).to_string_lossy().into_owned() });
 
     match c_value {
         Some(value) => start_read_thread(String::from(&value[..])),
-        None => ()
+        None => (),
     }
 }
 
@@ -112,9 +106,10 @@ fn it_works() {
     assert_eq!(*output, 26);
     assert!(res.is_ok());
     assert_eq!(match res {
-        Ok(val) => val,
-        Err(e) => e
-    }, 26);
+                   Ok(val) => val,
+                   Err(e) => e,
+               },
+               26);
 }
 
 // fn start_read_thread(url: String) {

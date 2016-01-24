@@ -23,9 +23,8 @@ fn crawl_page(page_url: String) {
     let parsed_url = String::from(Url::parse(&page_url).unwrap().domain().unwrap());
 
     unsafe {
-        let mut pages = KnownWebsitePages.entry(
-            parsed_url
-        ).or_insert(HashSet::new());
+        let mut pages = KnownWebsitePages.entry(parsed_url)
+                                         .or_insert(HashSet::new());
 
         if pages.insert(parsed_url) {
         }
@@ -43,9 +42,9 @@ fn get_internal_links(page: RcDom) {
         Element(ref name, _, _) => {
             if name.local == Atom::from("a") {
             }
-        },
+        }
 
-        _ => ()
+        _ => (),
     }
 }
 
