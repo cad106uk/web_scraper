@@ -16,6 +16,8 @@ use html5ever::rcdom::{Element, RcDom};
 
 use url::Url;
 
+use task_queue::make_task;
+
 
 // fn crawl_page(page_url: String) {
 //     let parsed_url = String::from(Url::parse(&page_url).unwrap().domain().unwrap());
@@ -46,6 +48,26 @@ fn get_internal_links(page: RcDom) {
     }
 }
 
+
+
+struct PageDownloader {
+    thread_url: String
+}
+
+impl AtomicProcess for PageDownloader {
+    fn process_this(&self) {
+        let client = Client::new();
+        let res = client.get(
+            &self.thread_url[..]
+        ).header(
+            Connection::close()
+        ).send().unwrap();
+
+        let mut body = String::new();
+        res.read_to_string(&mut body).unwrap();
+    }
+}
+
 fn store_raw_html_page(pages: Sender<String>, thread_url: String) {
     pages.send(download_page(thread_url)).unwrap()
 }
@@ -56,6 +78,7 @@ fn download_page(url: String) -> String {
 
     let mut body = String::new();
     res.read_to_string(&mut body).unwrap();
+    make_task!(parse_page, body)
 }
 
 fn parse_page(body: &String) -> RcDom {

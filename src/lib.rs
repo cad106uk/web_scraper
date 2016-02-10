@@ -27,14 +27,15 @@ use url::Url;
 use website_crawler::{download_page, store_raw_html_page};
 
 mod website_crawler;
+mod task_queue;
 
 
 struct ThreadCoordinator {
     KnownWebsitePages: HashMap<String, HashSet<String>>,
     PagesToDownload: VecDeque<Url>,
-    PagesToProcess: VecDeque<&String>,
-    ParsedPagesForInternalAchors: VecDeque<&RcDom>,
-    PagesToParse: VecDeque<&RcDom>,
+    PagesToProcess: VecDeque<Box<String>>,
+    ParsedPagesForInternalAchors: VecDeque<Box<RcDom>>,
+    PagesToParse: VecDeque<Box<RcDom>>,
 }
 
 impl ThreadCoordinator {
@@ -163,7 +164,6 @@ fn walk(handle: Handle, count: &mut Box<u64>) -> Result<u64, u64> {
     }
     Ok(**count)
 }
-
 fn process_next_page(raw_pages: Receiver<String>) -> Result<u64, u64> {
     let raw_html_page = raw_pages.recv().unwrap();
 
