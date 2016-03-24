@@ -1,34 +1,27 @@
-/*
-The plan here is to have a set of tasks sitting of a FIFO queue
-each thread gets 1 task and processes it. Each new task that is created
-is added to the queue.
- */
+// The plan here is to have a set of tasks sitting of a FIFO queue
+// each thread gets 1 task and processes it. Each new task that is created
+// is added to the queue.
+//
 
 use std::collections::VecDeque;
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread::{current, park, Thread};
 use std::vec::Vec;
 
-trait AtomicProcess {
-    fn process_this(&self) -> Vec<Box<AtomicProcess>>;
+pub enum ProcessOutputs {
+    Processes(Vec<Box<AtomicProcess>>),
+    Output(i64),
 }
 
-macro_rules! make_task {
-    ($($head:expr; $tail:expr) => {{
-        struct task_from_macro {
-        }
-
-        impl AtomicProcess for task_from_macro {
-            fn process_this(&self) -> Vec<Box<AtomicProcess>> {
-                $head($($tail),*)
-            }
-        }
-    }};
+trait AtomicProcess {
+    fn process_this(&self) -> ProcessOutputs;
 }
 
 struct TaskQueue {
     threads: Arc<Mutex<Vec<Thread>>>,
     queue: Arc<Mutex<VecDeque<Box<AtomicProcess>>>>,
+    output_channel: Sender<i64>,
 }
 
 impl TaskQueue {
@@ -39,21 +32,19 @@ impl TaskQueue {
         }
     }
 
-    pub fn addTask(&self, new_task: AtomicProcess) {
-        self.queue.clone().lock().unwrap().push_front(Box::new(new_task));
-        for t in self.threads.iter() {
-            t.unpark();
-        }
+    pub fn addTask(&self, new_task: Box<AtomicProcess>) {
+        self.queue.clone().lock().unwrap().push_front(new_task);
+        self.threads.clone().lock().unwrap().iter().map(|t| t.unpark())
     }
-}
 
-fn start_task_queue_thread(queue: TaskQueue) {
-    queue.clone().lock().unwrap().push(current());
-    loop {
-        let task = queue.nextTask();
-        let results = task.process_this();
-        for res in results.iter() {
-            queue.addTask(&res);
+    pub fn addThreadToWorkers(&self, t_handle: Thread) {
+        self.threads.clone().lock().unwrap().push(t_handle);
+        loop {
+            let task = self.nextTask();
+            match task.process_this() {
+                ProcessOutputs::Processes(res) => res.iter().map(|res| self.addTask(res)),
+                ProcessOutputs::Output(output) => self.output_channel.send(output),
+            }
         }
     }
 }
