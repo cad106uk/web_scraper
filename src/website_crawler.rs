@@ -47,19 +47,25 @@ impl AtomicProcess for WalkDom {
         let child_iter = node.children.iter();
         match child_iter.next() {
             Some(child) => {
-                let mut output = vec![Box::new(WalkDom{handle: *child, count: self.count})];
+                let mut output = vec![Box::new(WalkDom {
+                                          handle: *child,
+                                          count: self.count,
+                                      })];
                 for c in child_iter {
-                    output.push(Box::new(WalkDom{handle: *c, count: self.count}));
+                    output.push(Box::new(WalkDom {
+                        handle: *c,
+                        count: self.count,
+                    }));
                 }
                 ProcessOutputs::Processes(output)
-            },
+            }
             None => ProcessOutputs::Output(self.count),
         }
     }
 }
 
 struct ParsePage {
-    raw_html_page: String
+    raw_html_page: String,
 }
 
 impl AtomicProcess for ParsePage {
@@ -67,35 +73,29 @@ impl AtomicProcess for ParsePage {
         let mut input = StrTendril::new();
         input.try_push_bytes(self.raw_html_page.as_bytes());
 
-        ProcessOutputs::Processes(
-            vec![Box::new(
-                WalkDom {
-                    handle: parse(one_input(input), Default::default()).document,
-                    count: 0i64,
-                }
-            )]
-        )
+        ProcessOutputs::Processes(vec![Box::new(WalkDom {
+                                           handle: parse(one_input(input), Default::default())
+                                                       .document,
+                                           count: 0i64,
+                                       })])
     }
 }
 
 struct PageDownloader {
-    thread_url: String
+    thread_url: String,
 }
 
 impl AtomicProcess for PageDownloader {
     fn process_this(&self) -> ProcessOutputs {
         let client = Client::new();
-        let res = client.get(
-            &self.thread_url[..]
-        ).header(
-            Connection::close()
-        ).send().unwrap();
+        let res = client.get(&self.thread_url[..])
+                        .header(Connection::close())
+                        .send()
+                        .unwrap();
 
         let mut body = String::new();
         res.read_to_string(&mut body).unwrap();
-        ProcessOutputs::Processes(
-            vec![Box::new(ParsePage{raw_html_page: body})]
-        )
+        ProcessOutputs::Processes(vec![Box::new(ParsePage { raw_html_page: body })])
     }
 }
 

@@ -37,9 +37,9 @@ fn start_read_thread(url: String) {
     };
     (0..4).map(|| {
         let worker_thread = thread::spawn(|i| i);
-        queue_controller.addThreadToWorkers(worker_thread);
+        queue_controller.addThreadToWorkers(worker_thread.thread());
     });
-    queue_controller.addTask(website_crawler::PageDownloader { thread_url: url });
+    queue_controller.addTask(Box::new(website_crawler::PageDownloader { thread_url: url }));
 
     loop {
         println!("Thread finished with count={:?}", receiver.recv().unwrap());
