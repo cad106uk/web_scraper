@@ -5,7 +5,6 @@ use std::io::Read;
 use std::default::Default;
 
 use tendril::StrTendril;
-
 use string_cache::Atom;
 
 use hyper::Client;
@@ -19,6 +18,7 @@ use url::Url;
 use task_queue::{AtomicProcess, ProcessOutputs};
 
 struct WalkDom {
+    add_task: Sender<Box<AtomicProcess>>,
     handle: Handle,
     count: i64,
 }

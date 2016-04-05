@@ -33,7 +33,7 @@ fn start_read_thread(url: String) {
         threads: Arc::new(Mutex::new(vec![])),
         queue:
             Arc::new(Mutex::new(VecDeque::new(<Box<AtomicProcess>>::new()))),
-        sender: sender,
+        output_channel: sender,
     };
     (0..4).map(|| {
         let worker_thread = thread::spawn(|i| i);
