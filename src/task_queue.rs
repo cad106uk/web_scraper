@@ -16,14 +16,14 @@ pub enum ProcessOutputs {
 }
 
 trait AtomicProcess {
-    fn process_this(&self) -> ProcessOutputs;
+    fn process_this(&self) -> Vec<ProcessOutputs>;
 }
 
 struct PauseThread;
 impl AtomicProcess for PauseThread {
-    fn process_this(&self) -> ProcessOutputs {
+    fn process_this(&self) -> Vec<ProcessOutputs> {
         park();
-        ProcessOutputs::Output(0i64)
+        vec![ProcessOutputs::Output(0i64)]
     }
 }
 

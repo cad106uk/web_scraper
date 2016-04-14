@@ -1,8 +1,8 @@
-extern crate libc;
 extern crate html5ever;
-extern crate tendril;
-extern crate string_cache;
 extern crate hyper;
+extern crate libc;
+extern crate string_cache;
+extern crate tendril;
 extern crate url;
 
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -15,8 +15,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use libc::c_char;
 
-use html5ever::{parse, one_input};
-
+use html5ever::parse_document;
 use tendril::StrTendril;
 
 use string_cache::Atom;
@@ -32,13 +31,13 @@ fn start_read_thread(url: String) {
     let queue_controller = TaskQueue {
         threads: Arc::new(Mutex::new(vec![])),
         queue:
-            Arc::new(Mutex::new(VecDeque::new(<Box<AtomicProcess>>::new()))),
+            Arc::new(Mutex::new(VecDeque::new())),
         output_channel: sender,
     };
-    (0..4).map(|| {
-        let worker_thread = thread::spawn(|i| i);
-        queue_controller.addThreadToWorkers(worker_thread.thread());
-    });
+    (0..4).map(|_| {
+        let worker_thread = thread::spawn(move || {});
+        queue_controller.addThreadToWorkers(*worker_thread.thread());
+    }).collect();
     queue_controller.addTask(Box::new(website_crawler::PageDownloader { thread_url: url }));
 
     loop {

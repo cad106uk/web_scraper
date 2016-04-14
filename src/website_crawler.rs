@@ -10,7 +10,9 @@ use string_cache::Atom;
 use hyper::Client;
 use hyper::header::Connection;
 
-use html5ever::{parse, one_input};
+use html5ever::parse_document;
+use html5ever::tree_builder::TreeBuilderOpts;
+use html5ever::driver::{ParseOpts, BytesOpts};
 use html5ever::rcdom::{Document, Doctype, Comment, Element, RcDom, Handle, Text};
 
 use url::Url;
@@ -18,13 +20,12 @@ use url::Url;
 use task_queue::{AtomicProcess, ProcessOutputs};
 
 struct WalkDom {
-    add_task: Sender<Box<AtomicProcess>>,
     handle: Handle,
     count: i64,
 }
 
 impl AtomicProcess for WalkDom {
-    fn process_this(&self) -> ProcessOutputs {
+    fn process_this(&self) -> Vec<ProcessOutputs> {
         let node = self.handle.borrow();
 
         match node.node {
@@ -43,41 +44,19 @@ impl AtomicProcess for WalkDom {
             Comment(_) => (),
         };
 
-
-        let child_iter = node.children.iter();
-        match child_iter.next() {
-            Some(child) => {
-                let mut output = vec![Box::new(WalkDom {
-                                          handle: *child,
-                                          count: self.count,
-                                      })];
-                for c in child_iter {
-                    output.push(Box::new(WalkDom {
-                        handle: *c,
-                        count: self.count,
-                    }));
-                }
-                ProcessOutputs::Processes(output)
-            }
-            None => ProcessOutputs::Output(self.count),
+        let dom_steps: Vec<ProcessOutputs> = node.children
+                                                 .iter()
+                                                 .map(|child| {
+                                                     ProcessOutputs::Processes(Box::new(WalkDom {
+                                                         handle: *child,
+                                                         count: self.count,
+                                                     }))
+                                                 })
+                                                 .collect();
+        if dom_steps.len() == 0 {
+            dom_steps.push(ProcessOutputs::Output(self.count));
         }
-    }
-}
-
-struct ParsePage {
-    raw_html_page: String,
-}
-
-impl AtomicProcess for ParsePage {
-    fn process_this(&self) -> ProcessOutputs {
-        let mut input = StrTendril::new();
-        input.try_push_bytes(self.raw_html_page.as_bytes());
-
-        ProcessOutputs::Processes(vec![Box::new(WalkDom {
-                                           handle: parse(one_input(input), Default::default())
-                                                       .document,
-                                           count: 0i64,
-                                       })])
+        dom_steps
     }
 }
 
@@ -86,42 +65,26 @@ struct PageDownloader {
 }
 
 impl AtomicProcess for PageDownloader {
-    fn process_this(&self) -> ProcessOutputs {
+    fn process_this(&self) -> Vec<ProcessOutputs> {
         let client = Client::new();
         let res = client.get(&self.thread_url[..])
                         .header(Connection::close())
                         .send()
                         .unwrap();
 
+        // Read the Response.
         let mut body = String::new();
-        res.read_to_string(&mut body).unwrap();
-        ProcessOutputs::Processes(vec![Box::new(ParsePage { raw_html_page: body })])
+
+        let mut input = StrTendril::new();
+        let _ = input.try_push_bytes(body.as_bytes());
+        let mut dom = parse_document(RcDom::default(), Default::default())
+                          .from_utf8()
+                          .process(input);
+
+
+        vec![ProcessOutputs::Processes(Box::new(WalkDom {
+                 handle: dom.document,
+                 count: 0i64,
+             }))]
     }
 }
-
-// fn store_raw_html_page(pages: Sender<String>, thread_url: String) {
-//     pages.send(download_page(thread_url)).unwrap()
-// }
-
-// fn download_page(url: String) -> String {
-//     let client = Client::new();
-//     let res = client.get(&url[..]).header(
-//         Connection::close()
-//     ).send().unwrap();
-
-//     let mut body = String::new();
-//     res.read_to_string(&mut body).unwrap();
-// }
-
-// fn parse_page(body: &String) -> RcDom {
-//     let mut input = StrTendril::new();
-//     input.try_push_bytes(body.as_bytes());
-
-//     parse(one_input(input), Default::default())
-// }
-
-// fn crawl_site_from_page(parsed_dom: &RcDom) {
-//     get_internal_links(*parsed_dom);
-//     // body
-//     // parsed_dom
-// }

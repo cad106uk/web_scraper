@@ -1,6 +1,6 @@
 [package]
 name = "web_scraper"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Ciaran Doherty <cad106uk@gmail.com>"]
 
 [lib]
@@ -8,9 +8,9 @@ name = "web_scraper"
 crate-type = ["dylib"]
 
 [dependencies]
-hyper = "0.6"
-libc = "0.1"
-html5ever = "0.2"
-tendril = "0.1"
-string_cache = "0.2"
-url = "0.5"
+hyper = "0.8"
+libc = "*"
+html5ever = "0.5"
+tendril = "*"
+string_cache = "*"
+url = "*"
