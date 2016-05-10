@@ -19,8 +19,11 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::thread::{current, park, Thread};
 
-use tendril::StrTendril;
+
 use string_cache::Atom;
+
+use tendril::Tendril;
+use tendril::stream::TendrilSink;
 
 use hyper::Client;
 use hyper::header::Connection;
@@ -32,13 +35,13 @@ use html5ever::rcdom::{Document, Doctype, Comment, Element, RcDom, Handle, Text}
 
 use url::Url;
 
-pub enum ProcessOutputs {
-    Processes(Box<AtomicProcess>),
-    Output(i64),
-}
-
 trait AtomicProcess {
     fn process_this(&self) -> Vec<ProcessOutputs>;
+}
+
+enum ProcessOutputs {
+    Processes(Box<AtomicProcess>),
+    Output(i64),
 }
 
 struct TaskQueue {
@@ -115,14 +118,14 @@ impl AtomicProcess for WalkDom {
         };
 
         let dom_steps: Vec<ProcessOutputs> = node.children
-                                                 .iter()
-                                                 .map(|child| {
-                                                     ProcessOutputs::Processes(Box::new(WalkDom {
-                                                         handle: *child,
-                                                         count: self.count,
-                                                     }))
-                                                 })
-                                                 .collect();
+            .iter()
+            .map(|child| {
+                ProcessOutputs::Processes(Box::new(WalkDom {
+                    handle: *child,
+                    count: self.count,
+                }))
+            })
+            .collect();
         if dom_steps.len() == 0 {
             dom_steps.push(ProcessOutputs::Output(self.count));
         }
@@ -133,19 +136,18 @@ impl AtomicProcess for WalkDom {
 impl AtomicProcess for PageDownloader {
     fn process_this(&self) -> Vec<ProcessOutputs> {
         let client = Client::new();
-        let res = client.get(&self.thread_url[..])
-                        .header(Connection::close())
-                        .send()
-                        .unwrap();
-
         // Read the Response.
         let mut body = String::new();
+        let res = client.get(&self.thread_url[..])
+            .header(Connection::close())
+            .send()
+            .unwrap();
+        let _ = res.read_to_string(&mut body);
 
-        let mut input = StrTendril::new();
-        let _ = input.try_push_bytes(body.as_bytes());
         let mut dom = parse_document(RcDom::default(), Default::default())
-                          .from_utf8()
-                          .process(input);
+            .from_bytes(BytesOpts::default())
+            .read_from(&mut body.as_bytes())
+            .unwrap();
 
 
         vec![ProcessOutputs::Processes(Box::new(WalkDom {
@@ -167,7 +169,7 @@ fn start_read_thread(url: String) {
             let worker_thread = thread::spawn(move || {});
             queue_controller.addThreadToWorkers(*worker_thread.thread());
         })
-        .collect();
+        .collect::<Vec<_>>();
     queue_controller.addTask(Box::new(PageDownloader { thread_url: url }));
 
     loop {
